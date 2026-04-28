@@ -78,23 +78,23 @@ typedef struct {
   uint8_t num_emphasis_delimiters_left;
 } Scanner;
 
-void *tree_sitter_lmy_external_scanner_create() {
+void *tree_sitter_lmd_external_scanner_create() {
   Scanner *s = calloc(1, sizeof(Scanner));
   return s;
 }
 
-void tree_sitter_lmy_external_scanner_destroy(void *payload) {
+void tree_sitter_lmd_external_scanner_destroy(void *payload) {
   free(payload);
 }
 
-unsigned tree_sitter_lmy_external_scanner_serialize(void *payload, char *buffer) {
+unsigned tree_sitter_lmd_external_scanner_serialize(void *payload, char *buffer) {
   Scanner *s = (Scanner *)payload;
   buffer[0] = (char)s->state;
   buffer[1] = (char)s->num_emphasis_delimiters_left;
   return 2;
 }
 
-void tree_sitter_lmy_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
+void tree_sitter_lmd_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
   Scanner *s = (Scanner *)payload;
   s->state = 0;
   s->num_emphasis_delimiters_left = 0;
@@ -244,7 +244,7 @@ static bool parse_emphasis(Scanner *s, TSLexer *lexer, const bool *valid_symbols
   return false;
 }
 
-bool tree_sitter_lmy_external_scanner_scan(
+bool tree_sitter_lmd_external_scanner_scan(
   void *payload,
   TSLexer *lexer,
   const bool *valid_symbols
