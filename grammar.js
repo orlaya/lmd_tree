@@ -2,7 +2,7 @@
 // @ts-check
 
 export default grammar({
-  name: 'lmy',
+  name: 'lmd',
 
   externals: $ => [
     $.fold_open,
