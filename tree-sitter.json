@@ -1,0 +1,24 @@
+{
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
+  "grammars": [
+    {
+      "name": "lmd",
+      "title": "lmd",
+      "scope": "source.lmd",
+      "file-types": [
+        "lmd"
+      ],
+      "injection-regex": "^lmd$",
+      "class-name": "TreeSitterLmd"
+    }
+  ],
+  "metadata": {
+    "version": "0.0.0",
+    "links": {
+      "repository": "https://seriously-why-the-fuck-is-this-required-on-init-!!"
+    }
+  },
+  "bindings": {
+    "rust": true
+  }
+}
