@@ -333,28 +333,38 @@ bool tree_sitter_lmd_external_scanner_scan(
     return true;
   }
 
-  // ── Fenced code body: opaque blob, consumes until ``` at start of line ──
+  // ── Fenced code body: opaque blob, consumes until ```+ at start of line ──
+  // The closing fence may be preceded by any amount of whitespace (spaces or
+  // tabs) — fenced blocks inside indented folds/preserves naturally indent
+  // their close. Only whitespace is allowed before the fence on that line.
+  // Three or more backticks closes the fence — many editors auto-insert
+  // extra backticks, so we don't insist on exactly three.
   if (valid_symbols[FENCED_CODE_BODY]) {
-    // Consume everything until we see ``` at column 0
     while (!lexer->eof(lexer)) {
       if (lexer->lookahead == '\n' || lexer->lookahead == '\r') {
         // Consume the newline
         if (lexer->lookahead == '\r') lexer->advance(lexer, false);
         if (lexer->lookahead == '\n') lexer->advance(lexer, false);
-        // Check if next line starts with ```
-        if (lexer->lookahead == '`') {
-          lexer->mark_end(lexer);
+        // Mark end of body BEFORE consuming any leading whitespace on the
+        // candidate close line — the whitespace and backticks belong to the
+        // following FENCED_CODE_DELIMITER token, not to the body.
+        lexer->mark_end(lexer);
+        // Skip leading whitespace on the new line
+        while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
           lexer->advance(lexer, false);
-          if (lexer->lookahead == '`') {
+        }
+        // Count backticks — three or more closes the fence
+        if (lexer->lookahead == '`') {
+          uint8_t backtick_count = 0;
+          while (lexer->lookahead == '`') {
             lexer->advance(lexer, false);
-            if (lexer->lookahead == '`') {
-              lexer->advance(lexer, false);
-              // Exactly three — not four+
-              if (lexer->lookahead != '`') {
-                lexer->result_symbol = FENCED_CODE_BODY;
-                return true;
-              }
-            }
+            backtick_count++;
+          }
+          if (backtick_count >= 3) {
+            // Confirmed close — body ends at the start of this line
+            // (mark_end was already set above).
+            lexer->result_symbol = FENCED_CODE_BODY;
+            return true;
           }
         }
         continue;
@@ -500,20 +510,23 @@ bool tree_sitter_lmd_external_scanner_scan(
     }
   }
 
-  // ── Fenced code delimiter: ``` (exactly three backticks) ──
-  if (valid_symbols[FENCED_CODE_DELIMITER] && lexer->lookahead == '`') {
-    lexer->advance(lexer, false);
-    if (lexer->lookahead == '`') {
+  // ── Fenced code delimiter: three or more backticks ──
+  // Only fires at the start of a line (possibly indented). A bare ``` mid-
+  // prose stays plain text — otherwise inline mentions like "no ```xyz code
+  // blocks here" inside a fold body would be misparsed as an opening fence.
+  // Accepts any run of 3+ backticks because many editors auto-insert extra
+  // backticks when typing fences, and the count carries no meaning here.
+  if (valid_symbols[FENCED_CODE_DELIMITER] && lexer->lookahead == '`' &&
+      column_before_skip == 0) {
+    uint8_t backtick_count = 0;
+    while (lexer->lookahead == '`') {
       lexer->advance(lexer, false);
-      if (lexer->lookahead == '`') {
-        lexer->advance(lexer, false);
-        lexer->mark_end(lexer);
-        // Exactly three — not four+
-        if (lexer->lookahead != '`') {
-          lexer->result_symbol = FENCED_CODE_DELIMITER;
-          return true;
-        }
-      }
+      backtick_count++;
+    }
+    if (backtick_count >= 3) {
+      lexer->mark_end(lexer);
+      lexer->result_symbol = FENCED_CODE_DELIMITER;
+      return true;
     }
     return false;
   }
